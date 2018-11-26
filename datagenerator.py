@@ -65,67 +65,76 @@ class ImageDataGenerator(object):
         else:
             raise ValueError("Invalid mode '%s'." %(mode))
 
+        # shuffle the first  'buffer_size' elements of the dataset
+        if shuffle:
+            data = data.shuffle(buffer_size=buffer_size)
+
+        # create a new dataset with batches of images
+        data = data.batch(batch_size)
+        self.data = data
 
 
 
 
-        def _read_txt_file(self):
-            """Read the content of the text file and store it into list
-            """
-            self.img_paths = []
-            self.labels = []
 
-            with open(self.txt_file, 'r') as f:
-                lines = f.readlines()
-                for line in lines:
-                    items = line.split(" ")
-                    self.img_paths.append(items[0])
-                    self.labels.append(int(items[1]))
 
-        def _shuffle_lists(self):
-            """Conjoined shuffling of the list of paths and labels"""
-            path = self.img_paths
-            labels = self.labels
-            permutation = np.random.permutation(self.data_size)
-            self.img_paths = []
-            self.labels = []
-            for i in permutation:
-                self.img_paths.append(path[i])
-                self.labels.append(labels[i])
+    def _read_txt_file(self):
+        """Read the content of the text file and store it into list
+        """
+        self.img_paths = []
+        self.labels = []
 
-        def _parse_function_train(self, filename, label):
+        with open(self.txt_file, 'r') as f:
+            lines = f.readlines()
+            for line in lines:
+                items = line.split(" ")
+                self.img_paths.append(items[0])
+                self.labels.append(int(items[1]))
 
-            """Input parser for samples of the training set"""
+    def _shuffle_lists(self):
+        """Conjoined shuffling of the list of paths and labels"""
+        path = self.img_paths
+        labels = self.labels
+        permutation = np.random.permutation(self.data_size)
+        self.img_paths = []
+        self.labels = []
+        for i in permutation:
+            self.img_paths.append(path[i])
+            self.labels.append(labels[i])
 
-            # convert label number into one-hot-encoding
-            one_hot = tf.one_hot(label, self.num_classes)# from the o
+    def _parse_function_train(self, filename, label):
 
-            # load an preprocess the image
-            img_string = tf.read_file(filename)
-            img_decoded = tf.image.decode_png(img_string, channels=3)
-            img_resized = tf.image.resize_images(img_decoded, [227, 227])
+        """Input parser for samples of the training set"""
 
-            # Dataaugmentation(数据扩充) comes here
-            img_centered = tf.subtract(img_resized, IMAGENET_MEAN) # ???
+        # convert label number into one-hot-encoding
+        one_hot = tf.one_hot(label, self.num_classes)# from the o
 
-            # RGB -> BGR
-            img_bgr = img_centered[:, :, ::-1]
+        # load an preprocess the image
+        img_string = tf.read_file(filename)
+        img_decoded = tf.image.decode_png(img_string, channels=3)
+        img_resized = tf.image.resize_images(img_decoded, [227, 227])
 
-            return img_bgr, one_hot
+        # Dataaugmentation(数据扩充) comes here
+        img_centered = tf.subtract(img_resized, IMAGENET_MEAN) # ???
 
-        def _parse_function_inference(self, filename, label):
-            """Input parser for samples of the of validation/test set"""
+        # RGB -> BGR
+        img_bgr = img_centered[:, :, ::-1]
 
-            # convert label number into one-hot-encoding
-            one_hot = tf.one_hot(label, self.num_classes)
+        return img_bgr, one_hot
 
-            # load and preprocess the image
-            img_string = tf.read_file(filename)
-            img_decoded = tf.image.decode_png(img_string, channels=3)
-            img_resized = tf.image.resize_images(img_decoded, [227, 227])
-            img_centered = tf.subtract(img_resized,IMAGENET_MEAN)
+    def _parse_function_inference(self, filename, label):
+        """Input parser for samples of the of validation/test set"""
 
-            # RGB -> BGR
-            img_bgr = img_centered[:, :, ::-1]
-            return img_bgr, one_hot
+        # convert label number into one-hot-encoding
+        one_hot = tf.one_hot(label, self.num_classes)
+
+        # load and preprocess the image
+        img_string = tf.read_file(filename)
+        img_decoded = tf.image.decode_png(img_string, channels=3)
+        img_resized = tf.image.resize_images(img_decoded, [227, 227])
+        img_centered = tf.subtract(img_resized,IMAGENET_MEAN)
+
+        # RGB -> BGR
+        img_bgr = img_centered[:, :, ::-1]
+        return img_bgr, one_hot
 
