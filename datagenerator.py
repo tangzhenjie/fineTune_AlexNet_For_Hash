@@ -41,6 +41,15 @@ class ImageDataGenerator(object):
         # retrieve the data from the text file
         self._read_txt_file()
 
+        # number of samples in the dataset
+        self.data_size = len(self.labels)
+
+        # initial shuffing(打乱) of the file and label list(together)
+        if shuffle:
+            self._shuffle_lists()
+
+
+
 
 
 
@@ -57,5 +66,15 @@ class ImageDataGenerator(object):
                     self.img_paths.append(items[0])
                     self.labels.append(int(items[1]))
 
+        def _shuffle_lists(self):
+            """Conjoined shuffling of the list of paths and labels"""
+            path = self.img_paths
+            labels = self.labels
+            permutation = np.random.permutation(self.data_size)
+            self.img_paths = []
+            self.labels = []
+            for i in permutation:
+                self.img_paths.append(path[i])
+                self.labels.append(labels[i])
 
 
