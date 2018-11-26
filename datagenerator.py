@@ -48,6 +48,13 @@ class ImageDataGenerator(object):
         if shuffle:
             self._shuffle_lists()
 
+        # convert lists to TF tensor
+        self.img_paths = convert_to_tensor(self.img_paths, dtype=dtypes.string)
+        self.labels = convert_to_tensor(self.labels, dtypes=dtypes.int32)
+
+        # create dataset
+        data = Dataset.from_tensor_slices((self.img_paths, self.labels))
+
 
 
 
