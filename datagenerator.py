@@ -55,6 +55,15 @@ class ImageDataGenerator(object):
         # create dataset
         data = Dataset.from_tensor_slices((self.img_paths, self.labels))
 
+        # distinguish between train/infer. when calling the parsing functions
+        if mode == "training":
+            data = data.map(self._parse_function_train, num_threads=8,
+                            output_buffer_size=100*batch_size)
+        elif mode == "inference":
+            data = data.map(self._parse_function_inference, num_threads=8,
+                            output_buffer_size=100*batch_size)
+        else:
+            raise ValueError("Invalid mode '%s'." %(mode))
 
 
 
@@ -84,4 +93,39 @@ class ImageDataGenerator(object):
                 self.img_paths.append(path[i])
                 self.labels.append(labels[i])
 
+        def _parse_function_train(self, filename, label):
+
+            """Input parser for samples of the training set"""
+
+            # convert label number into one-hot-encoding
+            one_hot = tf.one_hot(label, self.num_classes)# from the o
+
+            # load an preprocess the image
+            img_string = tf.read_file(filename)
+            img_decoded = tf.image.decode_png(img_string, channels=3)
+            img_resized = tf.image.resize_images(img_decoded, [227, 227])
+
+            # Dataaugmentation(数据扩充) comes here
+            img_centered = tf.subtract(img_resized, IMAGENET_MEAN) # ???
+
+            # RGB -> BGR
+            img_bgr = img_centered[:, :, ::-1]
+
+            return img_bgr, one_hot
+
+        def _parse_function_inference(self, filename, label):
+            """Input parser for samples of the of validation/test set"""
+
+            # convert label number into one-hot-encoding
+            one_hot = tf.one_hot(label, self.num_classes)
+
+            # load and preprocess the image
+            img_string = tf.read_file(filename)
+            img_decoded = tf.image.decode_png(img_string, channels=3)
+            img_resized = tf.image.resize_images(img_decoded, [227, 227])
+            img_centered = tf.subtract(img_resized,IMAGENET_MEAN)
+
+            # RGB -> BGR
+            img_bgr = img_centered[:, :, ::-1]
+            return img_bgr, one_hot
 
