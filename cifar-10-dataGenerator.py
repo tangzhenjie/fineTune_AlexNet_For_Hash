@@ -18,16 +18,31 @@ class Cifar10Data(object):
         # retrieve the data from the cifar-10 file
         self._read_cifar10_file(mode)
 
+        # shuffle the data
+        if shuffle:
+            self._shuffle_lists()
+
 
     def _read_cifar10_file(self, mode):
         if mode == "training":
             with open(trainDataFilePath, 'rb') as fo:
                 datadict = pickle.load(fo, encoding='latin1')
-                self.imgs = datadict['data']
+                self.imgs = datadict['data'].tolist()
                 self.labels = datadict['labels']
         else:
             with open(valDataFilePath, 'rb') as fo:
                 datadict = pickle.load(fo, encoding='latin1')
-                self.imgs = datadict['data']
+                self.imgs = datadict['data'].tolist()
                 self.labels = datadict['labels']
+
+    def _shuffle_lists(self):
+        """Conjoined shuffling of the list of paths and labels."""
+        imgs = self.imgs
+        labels = self.labels
+        permutation = np.random.permutation(self.dataSize)
+        self.imgs = []
+        self.labels = []
+        for i in permutation:
+            self.imgs.append(imgs[i])
+            self.labels.append(labels[i])
 
