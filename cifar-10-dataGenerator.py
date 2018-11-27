@@ -21,6 +21,11 @@ class Cifar10Data(object):
         # shuffle the data
         if shuffle:
             self._shuffle_lists()
+        # convert the list to TF
+        self.imgs = convert_to_tensor(self.imgs, dtype=dtypes.int8)
+        self.labels = convert_to_tensor(self.labels, dtype=dtypes.int32)
+
+
 
 
     def _read_cifar10_file(self, mode):
