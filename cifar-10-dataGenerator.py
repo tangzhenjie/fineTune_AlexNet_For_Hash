@@ -10,7 +10,7 @@ trainDataFilePath = "D:\\pycharm_program\\DATA\\cifar-10-batches-py\\data_batch_
 valDataFilePath = "D:\\pycharm_program\\DATA\\cifar-10-batches-py\\test_batch"
 
 class Cifar10Data(object):
-    def __init__(self, mode, batch_size, num_classes, shuffle=True, buffer_size=1000):
+    def __init__(self, mode, batch_size, shuffle=True, buffer_size=1000):
         """Create the cifar-10-data"""
         self.dataSize = 10000
         self.num_classes = 10
@@ -25,6 +25,17 @@ class Cifar10Data(object):
         self.imgs = convert_to_tensor(self.imgs, dtype=dtypes.int8)
         self.labels = convert_to_tensor(self.labels, dtype=dtypes.int32)
 
+        # create dataset
+        data = Dataset.from_tensor_slices((self.imgs, self.labels))
+
+        # shuffle the first `buffer_size` elements of the dataset
+        if shuffle:
+            data = data.shuffle(buffer_size=buffer_size)
+
+        # create a new dataset with batches of images
+        data = data.batch(batch_size)
+
+        self.data = data
 
 
 
