@@ -1,0 +1,33 @@
+import tensorflow as tf
+import numpy as np
+import pickle
+
+from tensorflow.data import Dataset
+from tensorflow.python.framework import dtypes
+from tensorflow.python.framework.ops import convert_to_tensor
+
+trainDataFilePath = "D:\\pycharm_program\\DATA\\cifar-10-batches-py\\data_batch_1"
+valDataFilePath = "D:\\pycharm_program\\DATA\\cifar-10-batches-py\\test_batch"
+
+class Cifar10Data(object):
+    def __init__(self, mode, batch_size, num_classes, shuffle=True, buffer_size=1000):
+        """Create the cifar-10-data"""
+        self.dataSize = 10000
+        self.num_classes = 10
+
+        # retrieve the data from the cifar-10 file
+        self._read_cifar10_file(mode)
+
+
+    def _read_cifar10_file(self, mode):
+        if mode == "training":
+            with open(trainDataFilePath, 'rb') as fo:
+                datadict = pickle.load(fo, encoding='latin1')
+                self.imgs = datadict['data']
+                self.labels = datadict['labels']
+        else:
+            with open(valDataFilePath, 'rb') as fo:
+                datadict = pickle.load(fo, encoding='latin1')
+                self.imgs = datadict['data']
+                self.labels = datadict['labels']
+
