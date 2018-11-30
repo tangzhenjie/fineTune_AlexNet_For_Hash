@@ -37,7 +37,13 @@ if not os.path.isdir(checkpoint_path):
 以下建立图的过程和部分变量
 """
 # 获取数据通道pipline(训练数据)
-x, y = cifar10_input.input_pipeline(batch_size, train_logical=True)
+train_imgs, train_labels = cifar10_input.input_pipeline(batch_size, train_logical=True)
+val_imgs, val_labels = cifar10_input.input_pipeline(batch_size, train_logical=False)
+
+# 初始化(因为先训练)
+x = train_imgs
+y = train_labels
+
 
 # 定义图的输入dropout_rate的占位符
 keep_prob = tf.placeholder(tf.float32)
@@ -119,6 +125,8 @@ with tf.Session() as sess:
     # 加载不训练层的参数
     model.load_initial_weights(sess)
 
+    #saver.restore(sess, "D:\\pycharm_program\\finetune_alexnet\\tmp\\checkpoints\\model_epoch10.ckpt")
+
     # 输出开始训练提示信息
     print("{} Start training...".format(datetime.now()))
     print("{} Open Tensorboard at --logdir {}".format(datetime.now(),
@@ -130,22 +138,26 @@ with tf.Session() as sess:
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     # 循环epochs
     for epoch in range(num_epochs):
-
+        # 改变成训练数据pipline
+        x = train_imgs
+        y = train_labels
         print("{} Epoch number: {}".format(datetime.now(), epoch+1))
 
         for step in range(train_batches_per_epoch):
 
-            # And run the training op
+            # 训练网络
             sess.run(train_op, feed_dict={keep_prob: dropout_rate})
 
-            # Generate summary with the current batch of data and write to file
+            # 用当前的数据生成summary然后写入文件
             if step % display_step == 0:
                 s = sess.run(merged_summary, feed_dict={keep_prob: dropout_rate})
 
                 writer.add_summary(s, epoch*train_batches_per_epoch + step)
+        # 改变为训练pipline
+        x = val_imgs
+        y = val_labels
 
-        x, y = cifar10_input.input_pipeline(batch_size, train_logical=False)
-        # Validate the model on the entire validation set
+        # 开始在整个验证集上验证
         print("{} Start validation".format(datetime.now()))
         test_acc = 0.
         test_count = 0
@@ -156,6 +168,7 @@ with tf.Session() as sess:
         test_acc /= test_count
         print("{} Validation Accuracy = {:.4f}".format(datetime.now(),
                                                        test_acc))
+        # 保存checkpoint of the model
         print("{} Saving checkpoint of model...".format(datetime.now()))
 
         # save checkpoint of the model
