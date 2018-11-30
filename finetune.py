@@ -1,72 +1,62 @@
 """Script to finetune AlexNet using tensorflow"""
 
 import os
-
 import numpy as np
 import tensorflow as tf
 import cifar10_input
 
 from alexnet import AlexNet
-
 from datetime import datetime
-
-
 
 """
 Configuration Part.
 """
 
-# Path to the textfiles for the trainings and validation set
-train_file = '/path/to/train.txt'
-val_file = '/path/to/val.txt'
+# 学习参数
+learning_rate = 0.0009     # 学习率
+num_epochs = 10            # 学习轮数（每一轮在所有训练集上训练一次）
+batch_size = 10            # 批量大小
 
-# Learning params
-learning_rate = 0.0009
-num_epochs = 10
-batch_size = 10
+# 网络参数
+dropout_rate = 0.5         # 保留的概率
+num_classes = 10           # 网络输出的种类数
+train_layers = ['fc8', 'fc7', 'fc6']   # 需要训练的网络层
 
-# Network params
-dropout_rate = 0.5
-num_classes = 10
-train_layers = ['fc8', 'fc7', 'fc6']
-
-# How often we want to write the tf.summary data to disk
+# 多久写tf.summary数据到磁盘
 display_step = 20
 
-# Path for tf.summary.FileWriter and to store model checkpoints
+# 写入文件地址
 filewriter_path = "D:\\pycharm_program\\finetune_alexnet\\tmp\\tensorboard"
 checkpoint_path = "D:\\pycharm_program\\finetune_alexnet\\tmp\\checkpoints"
 
-"""
-Main Part of the finetuning Script.
-"""
-
-# Create parent path if it doesn't exist
+# 如果不存在就新建一个
 if not os.path.isdir(checkpoint_path):
     os.mkdir(checkpoint_path)
 
-
-
-
+"""
+以下建立图的过程和部分变量
+"""
+# 获取数据通道pipline(训练数据)
 x, y = cifar10_input.input_pipeline(batch_size, train_logical=True)
 
+# 定义图的输入dropout_rate的占位符
 keep_prob = tf.placeholder(tf.float32)
 
-# Initialize model
+# 初始化模型
 model = AlexNet(x, keep_prob, num_classes, train_layers)
 
-# Link variable to model output
+# 关联上网络的输出层
 score = model.fc8
 
-# List of trainable variables of the layers we want to train
+# 列出需要训练的层scope
 var_list = [v for v in tf.trainable_variables() if v.name.split('/')[0] in train_layers]
 
-# Op for calculating the loss
+# 定义损失函数层
 with tf.name_scope("cross_ent"):
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=score,
                                                                   labels=y))
 
-# Train op
+# 定义训练操作
 with tf.name_scope("train"):
     # Get gradients of all trainable variables
     gradients = tf.gradients(loss, var_list)
@@ -76,54 +66,60 @@ with tf.name_scope("train"):
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     train_op = optimizer.apply_gradients(grads_and_vars=gradients)
 
-# Add gradients to summary
+# 添加梯度到summary中（tensorboard）
 for gradient, var in gradients:
     tf.summary.histogram(var.name + '/gradient', gradient)
 
-# Add the variables we train to the summary
+# 添加变量到summary中（tensorboard）
 for var in var_list:
     tf.summary.histogram(var.name, var)
 
-# Add the loss to summary
+# 添加损失到summary中（tensorboard）
 tf.summary.scalar('cross_entropy', loss)
 
 
-# Evaluation op: Accuracy of the model
+# 定义评价操作层
 with tf.name_scope("accuracy"):
     correct_pred = tf.equal(tf.argmax(score, 1), tf.argmax(y, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 
-# Add the accuracy to the summary
+# 添加准确率到summary（TensorBoard）
 tf.summary.scalar('accuracy', accuracy)
 
-# Merge all summaries together
+# 合并所有的summary
 merged_summary = tf.summary.merge_all()
 
-# Initialize the FileWriter
+# 初始化写入summary的文件地址
 writer = tf.summary.FileWriter(filewriter_path)
 
-# Initialize an saver for store model checkpoints
+# 初始化一个saver对象用来保存和恢复图中的variable
 saver = tf.train.Saver()
 
 
 
 
-# Get the number of training/validation steps per epoch
+# 根据批量大小来获取一个epoch需要多少个的批量（因为一个epoch需要训练或者评价一次所有的样本）
+# ：这里写死了因为cifar-10有50000个训练图片和10000测试图片
 train_batches_per_epoch = int(np.floor(50000/batch_size))
 val_batches_per_epoch = int(np.floor(10000/batch_size))
 
-# Start Tensorflow session
+"""
+以上建立图的过程和部分变量
+"""
+
+# 开始执行上面构建好的graph
 with tf.Session() as sess:
 
-    # Initialize all variables
+    # 初始化所有变量
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
-    # Add the model graph to TensorBoard
+    # 添加图graph到TensorBoard
     writer.add_graph(sess.graph)
 
-    # Load the pretrained weights into the non-trainable layer
+    # 加载不训练层的参数
     model.load_initial_weights(sess)
 
+    # 输出开始训练提示信息
     print("{} Start training...".format(datetime.now()))
     print("{} Open Tensorboard at --logdir {}".format(datetime.now(),
                                                       filewriter_path))
@@ -132,7 +128,7 @@ with tf.Session() as sess:
     coord = tf.train.Coordinator()
     # 开启队列
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-    # Loop over number of epochs
+    # 循环epochs
     for epoch in range(num_epochs):
 
         print("{} Epoch number: {}".format(datetime.now(), epoch+1))
