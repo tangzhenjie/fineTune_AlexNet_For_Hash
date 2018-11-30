@@ -125,7 +125,7 @@ with tf.Session() as sess:
     # 加载不训练层的参数
     model.load_initial_weights(sess)
 
-    #saver.restore(sess, "D:\\pycharm_program\\finetune_alexnet\\tmp\\checkpoints\\model_epoch10.ckpt")
+    saver.restore(sess, "D:\\pycharm_program\\finetune_alexnet\\tmp\\checkpoints\\model_epoch20.ckpt")
 
     # 输出开始训练提示信息
     print("{} Start training...".format(datetime.now()))
