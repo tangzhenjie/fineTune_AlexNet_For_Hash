@@ -128,7 +128,7 @@ if __name__ == "__main__":
     #获取数据
     #print('Getting/Transforming Data.')
     # 初始化数据管道获取训练数据和对应标签
-    images, targets = input_pipeline(batch_size, train_logical=True)
+    images, targets = input_pipeline(50000, train_logical=True)
 
     # 获取测试数据和对应标签
     with tf.Session() as sess:
@@ -136,6 +136,6 @@ if __name__ == "__main__":
         coord = tf.train.Coordinator()
         sess.run(tf.local_variables_initializer())
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-        print(images.dtype)
+        print(images)
         coord.request_stop()  # 请求线程结束
         coord.join()  # 等待线程结束
