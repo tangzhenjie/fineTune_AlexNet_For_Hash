@@ -16,36 +16,43 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import cifar10dataGenerator
 
 from alexnet import AlexNet
-from datagenerator import ImageDataGenerator
 from datetime import datetime
-from tensorflow.contrib.data import Iterator
+
 
 """
 Configuration Part.
 """
+"""
+获取当前地址
+"""
+# 更改工作目录
+abspath = os.path.abspath(__file__)  # 获取当前文件绝对地址
+# E:\GitHub\TF_Cookbook\08_Convolutional_Neural_Networks\03_CNN_CIFAR10\ostest.py
+dname = os.path.dirname(abspath)  # 获取文件所在文件夹地址
+# E:\GitHub\TF_Cookbook\08_Convolutional_Neural_Networks\03_CNN_CIFAR10
+os.chdir(dname)  # 转换目录文件夹到上层
 
-# Path to the textfiles for the trainings and validation set
-train_file = '/path/to/train.txt'
-val_file = '/path/to/val.txt'
+
 
 # Learning params
-learning_rate = 0.01
-num_epochs = 10
-batch_size = 128
+learning_rate = 0.001
+num_epochs = 1
+batch_size = 100
 
 # Network params
 dropout_rate = 0.5
-num_classes = 2
+num_classes = 10
 train_layers = ['fc8', 'fc7', 'fc6']
 
 # How often we want to write the tf.summary data to disk
 display_step = 20
 
 # Path for tf.summary.FileWriter and to store model checkpoints
-filewriter_path = "/tmp/finetune_alexnet/tensorboard"
-checkpoint_path = "/tmp/finetune_alexnet/checkpoints"
+filewriter_path = dname + "\\tmp\\tensorboard"
+checkpoint_path = dname + "\\tmp\\checkpoints"
 
 """
 Main Part of the finetuning Script.
@@ -57,29 +64,16 @@ if not os.path.isdir(checkpoint_path):
 
 # Place data loading and preprocessing on the cpu
 with tf.device('/cpu:0'):
-    tr_data = ImageDataGenerator(train_file,
-                                 mode='training',
-                                 batch_size=batch_size,
-                                 num_classes=num_classes,
-                                 shuffle=True)
-    val_data = ImageDataGenerator(val_file,
-                                  mode='inference',
-                                  batch_size=batch_size,
-                                  num_classes=num_classes,
-                                  shuffle=False)
+    # 数据集cifar-10的文件夹位置
+    data_dir = dname + "\\temp\\cifar-10-batches-bin"
+    tr_imgs, tr_labels  = cifar10dataGenerator.inputs(False, data_dir, batch_size)
+    val_imgs, val_labels = cifar10dataGenerator.inputs(True, data_dir, batch_size)
 
-    # create an reinitializable iterator given the dataset structure
-    iterator = Iterator.from_structure(tr_data.data.output_types,
-                                       tr_data.data.output_shapes)
-    next_batch = iterator.get_next()
 
-# Ops for initializing the two different iterators
-training_init_op = iterator.make_initializer(tr_data.data)
-validation_init_op = iterator.make_initializer(val_data.data)
 
-# TF placeholder for graph input and output
-x = tf.placeholder(tf.float32, [batch_size, 227, 227, 3])
-y = tf.placeholder(tf.float32, [batch_size, num_classes])
+# 开始时先训练
+x = tr_imgs
+y = tr_labels
 keep_prob = tf.placeholder(tf.float32)
 
 # Initialize model
@@ -136,12 +130,15 @@ writer = tf.summary.FileWriter(filewriter_path)
 saver = tf.train.Saver()
 
 # Get the number of training/validation steps per epoch
-train_batches_per_epoch = int(np.floor(tr_data.data_size/batch_size))
-val_batches_per_epoch = int(np.floor(val_data.data_size / batch_size))
+train_batches_per_epoch = int(np.floor(50000/batch_size))
+val_batches_per_epoch = int(np.floor(10000/batch_size))
 
 # Start Tensorflow session
 with tf.Session() as sess:
-
+    # 获得协调对象
+    coord = tf.train.Coordinator()
+    sess.run(tf.local_variables_initializer())
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     # Initialize all variables
     sess.run(tf.global_variables_initializer())
 
@@ -150,6 +147,7 @@ with tf.Session() as sess:
 
     # Load the pretrained weights into the non-trainable layer
     model.load_initial_weights(sess)
+    saver.restore(sess, checkpoint_path +"\\model_epoch1.ckpt")
 
     print("{} Start training...".format(datetime.now()))
     print("{} Open Tensorboard at --logdir {}".format(datetime.now(),
@@ -157,41 +155,31 @@ with tf.Session() as sess:
 
     # Loop over number of epochs
     for epoch in range(num_epochs):
-
+        x = tr_imgs
+        y = tr_labels
         print("{} Epoch number: {}".format(datetime.now(), epoch+1))
-
-        # Initialize iterator with the training dataset
-        sess.run(training_init_op)
 
         for step in range(train_batches_per_epoch):
 
-            # get next batch of data
-            img_batch, label_batch = sess.run(next_batch)
-
             # And run the training op
-            sess.run(train_op, feed_dict={x: img_batch,
-                                          y: label_batch,
-                                          keep_prob: dropout_rate})
+            sess.run(train_op, feed_dict={keep_prob: dropout_rate})
 
+            # 标志
+            print(step + 1)
             # Generate summary with the current batch of data and write to file
             if step % display_step == 0:
-                s = sess.run(merged_summary, feed_dict={x: img_batch,
-                                                        y: label_batch,
-                                                        keep_prob: 1.})
+                s = sess.run(merged_summary, feed_dict={keep_prob: 1.})
 
                 writer.add_summary(s, epoch*train_batches_per_epoch + step)
 
+        x = val_imgs
+        y = val_labels
         # Validate the model on the entire validation set
         print("{} Start validation".format(datetime.now()))
-        sess.run(validation_init_op)
         test_acc = 0.
         test_count = 0
         for _ in range(val_batches_per_epoch):
-
-            img_batch, label_batch = sess.run(next_batch)
-            acc = sess.run(accuracy, feed_dict={x: img_batch,
-                                                y: label_batch,
-                                                keep_prob: 1.})
+            acc = sess.run(accuracy, feed_dict={keep_prob: 1.})
             test_acc += acc
             test_count += 1
         test_acc /= test_count
@@ -206,3 +194,5 @@ with tf.Session() as sess:
 
         print("{} Model checkpoint saved at {}".format(datetime.now(),
                                                        checkpoint_name))
+    coord.request_stop()  # 请求线程结束
+    coord.join()  # 等待线程结束
