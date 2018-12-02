@@ -1,3 +1,26 @@
+"""This is an TensorFLow implementation of AlexNet by Alex Krizhevsky at all.
+
+Paper:
+(http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf)
+
+Explanation can be found in my blog post:
+https://kratzert.github.io/2017/02/24/finetuning-alexnet-with-tensorflow.html
+
+This script enables finetuning AlexNet on any given Dataset with any number of
+classes. The structure of this script is strongly inspired by the fast.ai
+Deep Learning class by Jeremy Howard and Rachel Thomas, especially their vgg16
+finetuning script:
+Link:
+- https://github.com/fastai/courses/blob/master/deeplearning1/nbs/vgg16.py
+
+
+The pretrained weights can be downloaded here and should be placed in the same
+folder as this file:
+- http://www.cs.toronto.edu/~guerzhoy/tf_alexnet/
+
+@author: Frederik Kratzert (contact: f.kratzert(at)gmail.com)
+"""
+
 import tensorflow as tf
 import numpy as np
 
@@ -8,6 +31,7 @@ class AlexNet(object):
     def __init__(self, x, keep_prob, num_classes, skip_layer,
                  weights_path='DEFAULT'):
         """Create the graph of the AlexNet model.
+
         Args:
             x: Placeholder for the input tensor.
             keep_prob: Dropout probability.
@@ -37,12 +61,12 @@ class AlexNet(object):
         conv1 = conv(self.X, 11, 11, 96, 4, 4, padding='VALID', name='conv1')
         norm1 = lrn(conv1, 2, 2e-05, 0.75, name='norm1')
         pool1 = max_pool(norm1, 3, 3, 2, 2, padding='VALID', name='pool1')
-
+        
         # 2nd Layer: Conv (w ReLu)  -> Lrn -> Pool with 2 groups
         conv2 = conv(pool1, 5, 5, 256, 1, 1, groups=2, name='conv2')
         norm2 = lrn(conv2, 2, 2e-05, 0.75, name='norm2')
         pool2 = max_pool(norm2, 3, 3, 2, 2, padding='VALID', name='pool2')
-
+        
         # 3rd Layer: Conv (w ReLu)
         conv3 = conv(pool2, 3, 3, 384, 1, 1, name='conv3')
 
@@ -54,8 +78,8 @@ class AlexNet(object):
         pool5 = max_pool(conv5, 3, 3, 2, 2, padding='VALID', name='pool5')
 
         # 6th Layer: Flatten -> FC (w ReLu) -> Dropout
-        flattened = tf.reshape(pool5, [-1, 6 * 6 * 256])
-        fc6 = fc(flattened, 6 * 6 * 256, 4096, name='fc6')
+        flattened = tf.reshape(pool5, [-1, 6*6*256])
+        fc6 = fc(flattened, 6*6*256, 4096, name='fc6')
         dropout6 = dropout(fc6, self.KEEP_PROB)
 
         # 7th Layer: FC (w ReLu) -> Dropout
@@ -67,6 +91,7 @@ class AlexNet(object):
 
     def load_initial_weights(self, session):
         """Load weights from file into network.
+
         As the weights from http://www.cs.toronto.edu/~guerzhoy/tf_alexnet/
         come as a dict of lists (e.g. weights['conv1'] is a list) and not as
         dict of dicts (e.g. weights['conv1'] is a dict with keys 'weights' &
@@ -100,6 +125,7 @@ class AlexNet(object):
 def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
          padding='SAME', groups=1):
     """Create a convolution layer.
+
     Adapted from: https://github.com/ethereon/caffe-tensorflow
     """
     # Get number of input channels
@@ -114,7 +140,7 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
         # Create tf variables for the weights and biases of the conv layer
         weights = tf.get_variable('weights', shape=[filter_height,
                                                     filter_width,
-                                                    input_channels / groups,
+                                                    input_channels/groups,
                                                     num_filters])
         biases = tf.get_variable('biases', shape=[num_filters])
 
