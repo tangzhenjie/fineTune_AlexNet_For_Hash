@@ -39,8 +39,8 @@ train_layers = ['fc8', 'fc7', 'fc6']
 display_step = 20
 
 # Path for tf.summary.FileWriter and to store model checkpoints
-filewriter_path = dname + "\\tmp\\tensorboard"
-checkpoint_path = dname + "\\tmp\\checkpoints"
+filewriter_path = dname + "/tmp/tensorboard"
+checkpoint_path = dname + "/tmp/checkpoints"
 
 """
 Main Part of the finetuning Script.
@@ -53,7 +53,7 @@ if not os.path.isdir(checkpoint_path):
 # Place data loading and preprocessing on the cpu
 with tf.device('/cpu:0'):
     # 数据集cifar-10的文件夹位置
-    data_dir = dname + "\\temp\\cifar-10-batches-bin"
+    data_dir = dname + "/temp/cifar-10-batches-bin"
     tr_imgs, tr_labels  = cifar10dataGenerator.inputs(False, data_dir, batch_size)
     val_imgs, val_labels = cifar10dataGenerator.inputs(True, data_dir, batch_size)
 
@@ -135,7 +135,7 @@ with tf.Session() as sess:
 
     # Load the pretrained weights into the non-trainable layer
     model.load_initial_weights(sess)
-    saver.restore(sess, checkpoint_path +"\\model_epoch1.ckpt")
+    saver.restore(sess, checkpoint_path +"/model_epoch1.ckpt")
 
     print("{} Start training...".format(datetime.now()))
     print("{} Open Tensorboard at --logdir {}".format(datetime.now(),
